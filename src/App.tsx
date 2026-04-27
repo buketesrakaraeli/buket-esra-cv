@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence, useScroll, useTransform } from "motion/react";
 import { Instagram, Globe, Mail, MapPin, GraduationCap, Camera, Mic, PenTool, Moon, Sun, Languages, Menu, X } from "lucide-react";
 
 // Hand-drawn style flower SVGs
@@ -86,18 +86,47 @@ const translations = {
 
 export default function App() {
   const [lang, setLang] = useState<"tr" | "en">("tr");
-  const [isDark, setIsDark] = useState(false);
+
+  // Initialize theme from localStorage or system preference
+  const [isDark, setIsDark] = useState(() => {
+    if (typeof window !== "undefined") {
+      const savedTheme = localStorage.getItem("theme");
+      if (savedTheme) {
+        return savedTheme === "dark";
+      }
+      return window.matchMedia("(prefers-color-scheme: dark)").matches;
+    }
+    return false;
+  });
+
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
 
-  const t = translations[lang];
-
+  // Theme effect and persistence
   useEffect(() => {
     if (isDark) {
       document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
     } else {
       document.documentElement.classList.remove("dark");
+      localStorage.setItem("theme", "light");
     }
   }, [isDark]);
+
+  // Navbar scroll effect
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Scroll utilities for parallax
+  const { scrollY } = useScroll();
+  const y1 = useTransform(scrollY, [0, 1000], [0, 200]);
+  const y2 = useTransform(scrollY, [0, 1000], [0, -150]);
+  const y3 = useTransform(scrollY, [0, 1000], [0, 100]);
 
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);
@@ -108,16 +137,24 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-rose-50 via-violet-50 to-teal-50 dark:from-slate-950 dark:via-indigo-950/80 dark:to-teal-950/80 text-slate-700 dark:text-slate-200 font-sans selection:bg-violet-200 selection:text-violet-900 dark:selection:bg-violet-500/30 dark:selection:text-violet-100 transition-colors duration-500 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-rose-50 via-violet-50 to-teal-50 dark:from-slate-950 dark:via-indigo-950/80 dark:to-teal-950/80 text-slate-700 dark:text-slate-200 font-sans selection:bg-violet-200 selection:text-violet-900 dark:selection:bg-violet-500/30 dark:selection:text-violet-100 transition-colors duration-700 relative overflow-hidden">
 
-      {/* Background Flowers */}
-      <Flower1 className="absolute top-20 -left-10 w-48 h-48 text-rose-300/40 dark:text-rose-400/10 -rotate-12 pointer-events-none" />
-      <Flower2 className="absolute top-1/3 -right-16 w-64 h-64 text-violet-300/40 dark:text-violet-400/10 rotate-45 pointer-events-none" />
-      <Flower3 className="absolute bottom-40 -left-12 w-40 h-40 text-teal-300/40 dark:text-teal-400/10 -rotate-45 pointer-events-none" />
-      <Flower1 className="absolute -bottom-20 right-10 w-56 h-56 text-amber-300/40 dark:text-amber-400/10 rotate-90 pointer-events-none" />
+      {/* Background Flowers with Parallax */}
+      <motion.div style={{ y: y1 }} className="absolute top-20 -left-10 z-0">
+        <Flower1 className="w-48 h-48 text-rose-300/40 dark:text-rose-400/10 -rotate-12 pointer-events-none" />
+      </motion.div>
+      <motion.div style={{ y: y2 }} className="absolute top-1/3 -right-16 z-0">
+        <Flower2 className="w-64 h-64 text-violet-300/40 dark:text-violet-400/10 rotate-45 pointer-events-none" />
+      </motion.div>
+      <motion.div style={{ y: y3 }} className="absolute bottom-40 -left-12 z-0">
+        <Flower3 className="w-40 h-40 text-teal-300/40 dark:text-teal-400/10 -rotate-45 pointer-events-none" />
+      </motion.div>
+      <motion.div style={{ y: y2 }} className="absolute -bottom-20 right-10 z-0">
+        <Flower1 className="w-56 h-56 text-amber-300/40 dark:text-amber-400/10 rotate-90 pointer-events-none" />
+      </motion.div>
 
       {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md border-b border-white/50 dark:border-slate-800/50 z-50 transition-colors duration-500">
+      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${isScrolled ? 'bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg shadow-sm shadow-violet-900/5 dark:shadow-black/20 border-b border-white/50 dark:border-slate-800/50 py-1' : 'bg-transparent py-4'}`}>
         <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
           <span className="font-medium text-lg tracking-wide text-slate-800 dark:text-slate-100">Buket Esra Karaeli</span>
 
@@ -219,7 +256,7 @@ export default function App() {
               className="space-y-6 text-center md:text-left"
             >
               <div>
-                <h1 className="text-4xl md:text-5xl font-semibold tracking-tight text-slate-800 dark:text-slate-100 mb-3">Buket Esra Karaeli</h1>
+                <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-3 text-transparent bg-clip-text bg-gradient-to-br from-slate-800 to-slate-500 dark:from-slate-100 dark:to-slate-400">Buket Esra Karaeli</h1>
                 <p className="text-lg text-violet-500 dark:text-violet-400 flex items-center justify-center md:justify-start gap-2 font-medium">
                   <MapPin className="w-4 h-4" /> {t.location}
                 </p>
@@ -266,20 +303,20 @@ export default function App() {
                 <h3 className="text-xl font-medium border-b border-violet-100 dark:border-slate-700/50 pb-4 text-slate-700 dark:text-slate-200">{t.skills}</h3>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="flex items-center gap-3 bg-white/60 dark:bg-slate-800/40 backdrop-blur-sm p-4 rounded-2xl shadow-sm border border-white/50 dark:border-slate-700/50 hover:bg-white/80 dark:hover:bg-slate-800/60 transition-colors">
-                    <div className="p-2 bg-rose-100 dark:bg-rose-900/30 rounded-xl text-rose-500 dark:text-rose-400"><Camera className="w-5 h-5" /></div>
+                  <div className="flex items-center gap-3 bg-white/40 dark:bg-slate-800/20 backdrop-blur-md p-4 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.1)] border border-white/60 dark:border-slate-700/50 hover:bg-white/70 dark:hover:bg-slate-800/40 hover:-translate-y-1 transition-all duration-300">
+                    <div className="p-2.5 bg-gradient-to-br from-rose-100 to-rose-50 dark:from-rose-900/40 dark:to-rose-800/20 rounded-xl text-rose-500 dark:text-rose-400 shadow-sm"><Camera className="w-5 h-5" /></div>
                     <span className="font-medium text-sm text-slate-700 dark:text-slate-200">{t.s1}</span>
                   </div>
-                  <div className="flex items-center gap-3 bg-white/60 dark:bg-slate-800/40 backdrop-blur-sm p-4 rounded-2xl shadow-sm border border-white/50 dark:border-slate-700/50 hover:bg-white/80 dark:hover:bg-slate-800/60 transition-colors">
-                    <div className="p-2 bg-violet-100 dark:bg-violet-900/30 rounded-xl text-violet-500 dark:text-violet-400"><Mic className="w-5 h-5" /></div>
+                  <div className="flex items-center gap-3 bg-white/40 dark:bg-slate-800/20 backdrop-blur-md p-4 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.1)] border border-white/60 dark:border-slate-700/50 hover:bg-white/70 dark:hover:bg-slate-800/40 hover:-translate-y-1 transition-all duration-300">
+                    <div className="p-2.5 bg-gradient-to-br from-violet-100 to-violet-50 dark:from-violet-900/40 dark:to-violet-800/20 rounded-xl text-violet-500 dark:text-violet-400 shadow-sm"><Mic className="w-5 h-5" /></div>
                     <span className="font-medium text-sm text-slate-700 dark:text-slate-200">{t.s2}</span>
                   </div>
-                  <div className="flex items-center gap-3 bg-white/60 dark:bg-slate-800/40 backdrop-blur-sm p-4 rounded-2xl shadow-sm border border-white/50 dark:border-slate-700/50 hover:bg-white/80 dark:hover:bg-slate-800/60 transition-colors">
-                    <div className="p-2 bg-sky-100 dark:bg-sky-900/30 rounded-xl text-sky-500 dark:text-sky-400"><PenTool className="w-5 h-5" /></div>
+                  <div className="flex items-center gap-3 bg-white/40 dark:bg-slate-800/20 backdrop-blur-md p-4 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.1)] border border-white/60 dark:border-slate-700/50 hover:bg-white/70 dark:hover:bg-slate-800/40 hover:-translate-y-1 transition-all duration-300">
+                    <div className="p-2.5 bg-gradient-to-br from-sky-100 to-sky-50 dark:from-sky-900/40 dark:to-sky-800/20 rounded-xl text-sky-500 dark:text-sky-400 shadow-sm"><PenTool className="w-5 h-5" /></div>
                     <span className="font-medium text-sm text-slate-700 dark:text-slate-200">{t.s3}</span>
                   </div>
-                  <div className="flex items-center gap-3 bg-white/60 dark:bg-slate-800/40 backdrop-blur-sm p-4 rounded-2xl shadow-sm border border-white/50 dark:border-slate-700/50 hover:bg-white/80 dark:hover:bg-slate-800/60 transition-colors">
-                    <div className="p-2 bg-teal-100 dark:bg-teal-900/30 rounded-xl text-teal-500 dark:text-teal-400"><Globe className="w-5 h-5" /></div>
+                  <div className="flex items-center gap-3 bg-white/40 dark:bg-slate-800/20 backdrop-blur-md p-4 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.1)] border border-white/60 dark:border-slate-700/50 hover:bg-white/70 dark:hover:bg-slate-800/40 hover:-translate-y-1 transition-all duration-300">
+                    <div className="p-2.5 bg-gradient-to-br from-teal-100 to-teal-50 dark:from-teal-900/40 dark:to-teal-800/20 rounded-xl text-teal-500 dark:text-teal-400 shadow-sm"><Globe className="w-5 h-5" /></div>
                     <span className="font-medium text-sm text-slate-700 dark:text-slate-200">{t.s4}</span>
                   </div>
                 </div>
@@ -311,7 +348,7 @@ export default function App() {
             <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/40 dark:from-white/5 to-transparent pointer-events-none"></div>
 
             <div className="relative z-10">
-              <h2 className="text-3xl font-semibold tracking-tight mb-4 text-slate-800 dark:text-slate-100">{t.getInTouch}</h2>
+              <h2 className="text-3xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-br from-slate-800 to-slate-500 dark:from-slate-100 dark:to-slate-400">{t.getInTouch}</h2>
               <p className="text-slate-500 dark:text-slate-400 max-w-xl mx-auto mb-10 font-light text-lg">
                 {t.contactDesc}
               </p>
